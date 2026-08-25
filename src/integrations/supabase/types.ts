@@ -14,16 +14,184 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analysis_batches: {
+        Row: {
+          audio_seconds: number
+          completed_files: number
+          created_at: string
+          error_message: string | null
+          estimated_cost_usd: number
+          failed_files: number
+          id: string
+          name: string
+          owner_id: string
+          processing_ms: number
+          status: Database["public"]["Enums"]["batch_status"]
+          total_files: number
+          updated_at: string
+        }
+        Insert: {
+          audio_seconds?: number
+          completed_files?: number
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number
+          failed_files?: number
+          id?: string
+          name: string
+          owner_id: string
+          processing_ms?: number
+          status?: Database["public"]["Enums"]["batch_status"]
+          total_files?: number
+          updated_at?: string
+        }
+        Update: {
+          audio_seconds?: number
+          completed_files?: number
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number
+          failed_files?: number
+          id?: string
+          name?: string
+          owner_id?: string
+          processing_ms?: number
+          status?: Database["public"]["Enums"]["batch_status"]
+          total_files?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      analysis_items: {
+        Row: {
+          audio_quality: string | null
+          background_noise_present: boolean | null
+          background_noise_severity: string | null
+          background_noise_type: string | null
+          batch_id: string
+          confidence: number | null
+          created_at: string
+          diagnostics: Json
+          duration_seconds: number | null
+          emotional_intensity: string | null
+          emotional_tone: string | null
+          error_message: string | null
+          expected_result: Json | null
+          field_confidence: Json
+          file_name: string
+          id: string
+          long_silence_present: boolean | null
+          processing_ms: number | null
+          speaker_overlap_present: boolean | null
+          stage_used: string | null
+          status: Database["public"]["Enums"]["item_status"]
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          audio_quality?: string | null
+          background_noise_present?: boolean | null
+          background_noise_severity?: string | null
+          background_noise_type?: string | null
+          batch_id: string
+          confidence?: number | null
+          created_at?: string
+          diagnostics?: Json
+          duration_seconds?: number | null
+          emotional_intensity?: string | null
+          emotional_tone?: string | null
+          error_message?: string | null
+          expected_result?: Json | null
+          field_confidence?: Json
+          file_name: string
+          id?: string
+          long_silence_present?: boolean | null
+          processing_ms?: number | null
+          speaker_overlap_present?: boolean | null
+          stage_used?: string | null
+          status?: Database["public"]["Enums"]["item_status"]
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audio_quality?: string | null
+          background_noise_present?: boolean | null
+          background_noise_severity?: string | null
+          background_noise_type?: string | null
+          batch_id?: string
+          confidence?: number | null
+          created_at?: string
+          diagnostics?: Json
+          duration_seconds?: number | null
+          emotional_intensity?: string | null
+          emotional_tone?: string | null
+          error_message?: string | null
+          expected_result?: Json | null
+          field_confidence?: Json
+          file_name?: string
+          id?: string
+          long_silence_present?: boolean | null
+          processing_ms?: number | null
+          speaker_overlap_present?: boolean | null
+          stage_used?: string | null
+          status?: Database["public"]["Enums"]["item_status"]
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analysis_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "analysis_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "analyst"
+      batch_status:
+        | "validating"
+        | "queued"
+        | "processing"
+        | "completed"
+        | "partial"
+        | "failed"
+      item_status: "queued" | "processing" | "completed" | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +318,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "analyst"],
+      batch_status: [
+        "validating",
+        "queued",
+        "processing",
+        "completed",
+        "partial",
+        "failed",
+      ],
+      item_status: ["queued", "processing", "completed", "failed"],
+    },
   },
 } as const
