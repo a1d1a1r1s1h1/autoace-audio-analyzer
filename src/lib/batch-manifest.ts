@@ -23,11 +23,11 @@ export function parseManifest(csv: string): ManifestRow[] {
   if (!parsed.meta.fields?.includes("name")) throw new Error("Manifest requires a name column");
   const seen = new Set<string>();
   return parsed.data.map((row) => {
-    const name = safeFileName((row.name ?? "").trim());
-    if (!name || !isAudioFile(name)) throw new Error(`Invalid audio filename in manifest: ${row.name ?? "empty"}`);
+    const name = safeFileName((row["name"] ?? "").trim());
+    if (!name || !isAudioFile(name)) throw new Error(`Invalid audio filename in manifest: ${row["name"] ?? "empty"}`);
     if (seen.has(name)) throw new Error(`Duplicate filename in manifest: ${name}`);
     seen.add(name);
-    return { name, ...(row.result_json?.trim() ? { result_json: row.result_json.trim() } : {}) };
+    return { name, ...(row["result_json"]?.trim() ? { result_json: row["result_json"].trim() } : {}) };
   });
 }
 
