@@ -6,7 +6,6 @@ import { AudioDashboard } from "@/components/audio-dashboard";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
-  ssr: false,
   head: () => ({ meta: [
     { title: "AutoAce Audio Analysis Dashboard" },
     { name: "description", content: "Secure batch voice-tone, background-noise, overlap, silence, and audio-quality analysis for call operations." },
