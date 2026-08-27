@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { analyzeAudio } from "@/lib/audio-analysis";
 import { isAudioFile, parseManifest, safeFileName, validateBatch, type ManifestRow } from "@/lib/batch-manifest";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Json, Tables } from "@/integrations/supabase/types";
 
 type Batch = Tables<"analysis_batches">; type Item = Tables<"analysis_items">;
 
@@ -29,7 +29,7 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
 
   async function load() {
     const { data, error } = await supabase.from("analysis_batches").select("*").order("created_at", { ascending: false });
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setBatches(data ?? []); setActiveId((current) => current ?? data?.[0]?.id);
   }
   async function loadItems(id?: string) {
@@ -69,7 +69,7 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
       for (const entry of audio) {
         const path = `${userId}/${batch.id}/${entry.name}`;
         const { error: storageError } = await supabase.storage.from("audio-batches").upload(path, entry.blob, { contentType: entry.blob.type || "audio/*", upsert: false });
-        const { data: item, error: itemError } = await supabase.from("analysis_items").insert({ batch_id: batch.id, file_name: entry.name, storage_path: storageError ? null : path, status: "processing", expected_result: entry.expected ?? null }).select().single();
+        const { data: item, error: itemError } = await supabase.from("analysis_items").insert({ batch_id: batch.id, file_name: entry.name, storage_path: storageError ? null : path, status: "processing", expected_result: (entry.expected ?? null) as Json }).select().single();
         if (itemError) { failed += 1; continue; }
         try {
           const result = await analyzeAudio(entry.blob); completed += 1; seconds += result.duration_seconds; processing += result.processing_ms;
