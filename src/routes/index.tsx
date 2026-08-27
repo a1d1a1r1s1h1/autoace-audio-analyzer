@@ -1,24 +1,33 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import type { User } from "@supabase/supabase-js";
+import { AuthPanel } from "@/components/auth-panel";
+import { AudioDashboard } from "@/components/audio-dashboard";
+import { supabase } from "@/integrations/supabase/client";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  ssr: false,
+  head: () => ({ meta: [
+    { title: "AutoAce Audio Analysis Dashboard" },
+    { name: "description", content: "Secure batch voice-tone, background-noise, overlap, silence, and audio-quality analysis for call operations." },
+    { property: "og:title", content: "AutoAce Audio Analysis Dashboard" },
+    { property: "og:description", content: "Secure batch voice-tone and call-quality analysis for audio operations." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary_large_image" },
+  ] }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
 function Index() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUser(data.user));
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") setUser(session?.user ?? null);
+    });
+    return () => data.subscription.unsubscribe();
+  }, []);
+  if (user === undefined) return <div className="grid min-h-screen place-items-center bg-background"><div className="size-8 animate-pulse rounded-md bg-primary" aria-label="Loading" /></div>;
+  if (!user) return <AuthPanel />;
+  return <AudioDashboard userId={user.id} email={user.email ?? "Analyst"} />;
 }
