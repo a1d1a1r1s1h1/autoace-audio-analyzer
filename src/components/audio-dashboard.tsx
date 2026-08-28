@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { analyzeAudio } from "@/lib/audio-analysis";
+import { classifyAudioEmotion } from "@/lib/audio-analysis.functions";
 import { isAudioFile, parseManifest, safeFileName, validateBatch, type ManifestRow } from "@/lib/batch-manifest";
 import { supabase } from "@/integrations/supabase/client";
 import type { Json, Tables } from "@/integrations/supabase/types";
@@ -17,6 +18,17 @@ type Batch = Tables<"analysis_batches">; type Item = Tables<"analysis_items">;
 function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type })); const anchor = document.createElement("a");
   anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
+}
+
+async function toBase64(blob: Blob) {
+  const bytes = new Uint8Array(await blob.arrayBuffer()); let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+  return btoa(binary);
+}
+
+function audioFormat(name: string) {
+  const extension = name.toLowerCase().split(".").pop();
+  return extension === "mp3" || extension === "webm" || extension === "m4a" || extension === "ogg" || extension === "aac" || extension === "flac" ? extension : "wav";
 }
 
 const display = (value: string | null) => value ? value.replaceAll("_", " ") : "—";
@@ -72,7 +84,16 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
         const { data: item, error: itemError } = await supabase.from("analysis_items").insert({ batch_id: batch.id, file_name: entry.name, storage_path: storageError ? null : path, status: "processing", expected_result: (entry.expected ?? null) as Json }).select().single();
         if (itemError) { failed += 1; continue; }
         try {
-          const result = await analyzeAudio(entry.blob); completed += 1; seconds += result.duration_seconds; processing += result.processing_ms;
+          let result = await analyzeAudio(entry.blob);
+          if ((result.field_confidence["emotion"] ?? 1) < 0.64) {
+            try {
+              const deep = await classifyAudioEmotion({ data: { base64: await toBase64(entry.blob), format: audioFormat(entry.name) } });
+              result = { ...result, emotional_tone: deep.emotional_tone, emotional_intensity: deep.emotional_intensity, confidence: Math.max(result.confidence, deep.confidence), field_confidence: { ...result.field_confidence, emotion: deep.confidence }, stage_used: "A + B + C (deep audio)" };
+            } catch (error) {
+              result = { ...result, stage_used: "A + B (Stage C unavailable)", diagnostics: { ...result.diagnostics, stage_c_error: error instanceof Error ? error.message : "Deep audio analysis unavailable" } };
+            }
+          }
+          completed += 1; seconds += result.duration_seconds; processing += result.processing_ms;
           await supabase.from("analysis_items").update({ ...result, status: "completed" }).eq("id", item.id);
         } catch (error) {
           failed += 1; await supabase.from("analysis_items").update({ status: "failed", error_message: error instanceof Error ? error.message : "Audio could not be decoded" }).eq("id", item.id);
