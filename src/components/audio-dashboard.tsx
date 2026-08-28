@@ -85,7 +85,7 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
         if (itemError) { failed += 1; continue; }
         try {
           let result = await analyzeAudio(entry.blob);
-          if ((result.field_confidence.emotion ?? 1) < 0.64) {
+          if ((result.field_confidence["emotion"] ?? 1) < 0.64) {
             try {
               const deep = await classifyAudioEmotion({ data: { base64: await toBase64(entry.blob), format: audioFormat(entry.name) } });
               result = { ...result, emotional_tone: deep.emotional_tone, emotional_intensity: deep.emotional_intensity, confidence: Math.max(result.confidence, deep.confidence), field_confidence: { ...result.field_confidence, emotion: deep.confidence }, stage_used: "A + B + C (deep audio)" };
