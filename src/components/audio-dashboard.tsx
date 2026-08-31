@@ -33,6 +33,10 @@ function audioFormat(name: string) {
 
 const display = (value: string | null) => value ? value.replaceAll("_", " ") : "—";
 
+/** Local Stage A/B browser compute (amortised) and Stage C deep-audio model cost, per audio minute. */
+const LOCAL_RATE_PER_MIN = 0.00008;
+const DEEP_RATE_PER_MIN = 0.003;
+
 export function AudioDashboard({ userId, email }: { userId: string; email: string }) {
   const [batches, setBatches] = useState<Batch[]>([]); const [items, setItems] = useState<Item[]>([]);
   const [activeId, setActiveId] = useState<string>(); const [busy, setBusy] = useState(false);
@@ -77,7 +81,8 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
       const batchName = files.length === 1 ? files[0]?.name.replace(/\.zip$/i, "") ?? "Audio batch" : `Audio batch · ${new Date().toLocaleDateString()}`;
       const { data: batch, error: batchError } = await supabase.from("analysis_batches").insert({ owner_id: userId, name: batchName, status: "processing", total_files: audio.length }).select().single();
       if (batchError) throw batchError;
-      setActiveId(batch.id); await load(); let completed = 0; let failed = 0; let seconds = 0; let processing = 0;
+      setActiveId(batch.id); await load(); let completed = 0; let failed = 0; let seconds = 0; let processing = 0; let deepSeconds = 0;
+      const cost = () => Number(((seconds / 60) * LOCAL_RATE_PER_MIN + (deepSeconds / 60) * DEEP_RATE_PER_MIN).toFixed(6));
       for (const entry of audio) {
         const path = `${userId}/${batch.id}/${entry.name}`;
         const { error: storageError } = await supabase.storage.from("audio-batches").upload(path, entry.blob, { contentType: entry.blob.type || "audio/*", upsert: false });
@@ -89,6 +94,7 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
             try {
               const deep = await classifyAudioEmotion({ data: { base64: await toBase64(entry.blob), format: audioFormat(entry.name) } });
               result = { ...result, emotional_tone: deep.emotional_tone, emotional_intensity: deep.emotional_intensity, confidence: Math.max(result.confidence, deep.confidence), field_confidence: { ...result.field_confidence, emotion: deep.confidence }, stage_used: "A + B + C (deep audio)" };
+              deepSeconds += result.duration_seconds;
             } catch (error) {
               result = { ...result, stage_used: "A + B (Stage C unavailable)", diagnostics: { ...result.diagnostics, stage_c_error: error instanceof Error ? error.message : "Deep audio analysis unavailable" } };
             }
@@ -98,10 +104,11 @@ export function AudioDashboard({ userId, email }: { userId: string; email: strin
         } catch (error) {
           failed += 1; await supabase.from("analysis_items").update({ status: "failed", error_message: error instanceof Error ? error.message : "Audio could not be decoded" }).eq("id", item.id);
         }
-        await supabase.from("analysis_batches").update({ completed_files: completed, failed_files: failed, audio_seconds: seconds, processing_ms: processing }).eq("id", batch.id);
+        await supabase.from("analysis_batches").update({ completed_files: completed, failed_files: failed, audio_seconds: seconds, processing_ms: processing, estimated_cost_usd: cost() }).eq("id", batch.id);
         await loadItems(batch.id);
       }
-      await supabase.from("analysis_batches").update({ status: failed === audio.length ? "failed" : failed ? "partial" : "completed", estimated_cost_usd: 0, completed_files: completed, failed_files: failed, audio_seconds: seconds, processing_ms: processing }).eq("id", batch.id);
+      await supabase.from("analysis_batches").update({ status: failed === audio.length ? "failed" : failed ? "partial" : "completed", estimated_cost_usd: cost(), completed_files: completed, failed_files: failed, audio_seconds: seconds, processing_ms: processing }).eq("id", batch.id);
+
       await load(); await loadItems(batch.id); toast.success(`Processed ${completed} of ${audio.length} files`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Upload failed"); } finally { setBusy(false); }
   }
