@@ -37,6 +37,13 @@ const display = (value: string | null) => value ? value.replaceAll("_", " ") : "
 const LOCAL_RATE_PER_MIN = 0.00008;
 const DEEP_RATE_PER_MIN = 0.003;
 
+/** Sub-cent batches would round to $0.00, so tiny totals are shown in micro-dollars. */
+function formatCost(value: number) {
+  if (value <= 0) return "$0";
+  if (value < 0.001) return `${(value * 1_000_000).toFixed(0)} µ$`;
+  return `$${value.toFixed(4)}`;
+}
+
 export function AudioDashboard({ userId, email }: { userId: string; email: string }) {
   const [batches, setBatches] = useState<Batch[]>([]); const [items, setItems] = useState<Item[]>([]);
   const [activeId, setActiveId] = useState<string>(); const [busy, setBusy] = useState(false);
