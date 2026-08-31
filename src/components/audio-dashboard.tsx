@@ -33,6 +33,10 @@ function audioFormat(name: string) {
 
 const display = (value: string | null) => value ? value.replaceAll("_", " ") : "—";
 
+/** Local Stage A/B browser compute (amortised) and Stage C deep-audio model cost, per audio minute. */
+const LOCAL_RATE_PER_MIN = 0.00008;
+const DEEP_RATE_PER_MIN = 0.003;
+
 export function AudioDashboard({ userId, email }: { userId: string; email: string }) {
   const [batches, setBatches] = useState<Batch[]>([]); const [items, setItems] = useState<Item[]>([]);
   const [activeId, setActiveId] = useState<string>(); const [busy, setBusy] = useState(false);
