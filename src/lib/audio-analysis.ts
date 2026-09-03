@@ -109,7 +109,7 @@ export async function analyzeAudio(file: Blob): Promise<AudioPrediction> {
     const noiseScore = clamp(f.flatness * 0.9 + f.zcr * 3.2 + (f.rms < 0.025 ? 0.12 : 0));
     const noisePresent = noiseScore > 0.36;
     const noiseSeverity = !noisePresent ? "none" : noiseScore > 0.72 ? "high" : noiseScore > 0.52 ? "medium" : "low";
-    const noiseType = !noisePresent ? "none" : f.flatness > 0.58 ? "broadband / wind" : f.centroid > 2600 ? "keyboard / high-frequency" : f.zcr > 0.13 ? "office chatter" : "ambient room noise";
+    const noiseType = !noisePresent ? "" : f.flatness > 0.58 ? "broadband / wind" : f.centroid > 2600 ? "keyboard / high-frequency" : f.zcr > 0.13 ? "office chatter" : "ambient room noise";
     const impairedScore = clamp(f.clippingRatio * 80 + (f.rms < 0.008 ? 0.6 : 0) + noiseScore * 0.55 + (f.centroid < 500 ? 0.3 : 0));
     const quality = impairedScore > 0.72 ? "severely_impaired" : impairedScore > 0.38 ? "slightly_impaired" : "clear";
     const overlapScore = clamp(f.rmsVariation * 7 + f.pitchVariation * 0.55 + (f.centroid > 2100 ? 0.12 : 0));

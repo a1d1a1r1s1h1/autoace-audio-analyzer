@@ -34,5 +34,8 @@ export function validatePrediction(value: AudioPrediction): AudioPrediction {
   if (!value.background_noise_present && value.background_noise_severity !== "none") {
     throw new Error("Noise severity must be none when background noise is absent");
   }
+  if (!value.background_noise_present && value.background_noise_type !== "") {
+    throw new Error("Noise type must be an empty string when background noise is absent");
+  }
   return value;
 }
